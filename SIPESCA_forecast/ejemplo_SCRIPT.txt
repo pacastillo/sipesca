@@ -1,0 +1,17 @@
+
+library(forecast)
+rain <- scan("ejemplo.dat")
+rainseries <- ts(rain,start=c(1913))
+
+#un modelo menos bueno
+
+forecast(ets(rainseries), 5)
+plot( forecast(ets(rainseries), 5) )
+
+
+#un modelo mejor
+
+rainseriesHW <- HoltWinters(rainseries, gamma=FALSE)
+forecast.HoltWinters(rainseriesHW, h=5)
+plot( forecast.HoltWinters(rainseriesHW, h=5) )
+

@@ -1,0 +1,33 @@
+
+La salida que da el "ejemplo_SCRIPT.txt" es:
+
+--------------------
+
+el modelo basado en ETS:
+
+     Point Forecast    Lo 80    Hi 80    Lo 95    Hi 95
+2013       24.82402 19.44968 30.19835 16.60468 33.04335
+2014       24.82402 19.44968 30.19835 16.60468 33.04335
+2015       24.82402 19.44968 30.19835 16.60468 33.04335
+2016       24.82402 19.44968 30.19835 16.60468 33.04335
+2017       24.82402 19.44968 30.19835 16.60468 33.04335
+
+
+el modelo de HoltWinters
+
+     Point Forecast    Lo 80    Hi 80    Lo 95    Hi 95
+2013       26.55527 20.18155 32.92899 16.80751 36.30303
+2014       26.84042 20.24526 33.43558 16.75399 36.92685
+2015       27.12557 20.19463 34.05652 16.52561 37.72554
+2016       27.41072 20.01946 34.80199 16.10677 38.71468
+2017       27.69588 19.71743 35.67432 15.49390 39.89785
+
+
+--------------------
+
+
+Los dos "plot" que hay en el script generan los gráficos que vemos como capturas en PNG. 
+En realidad se pueden comentar y que no se genere nada más que el texto.
+
+También se puede mejorar para generar los gráficos a PNG directamente para servirlos como información a través del portal (las predicciones ya preparadas).
+
