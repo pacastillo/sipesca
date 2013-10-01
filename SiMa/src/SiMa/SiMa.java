@@ -3,11 +3,12 @@
  */
 package SiMa;
 
-import Entorno.Conectar.Conectar;
 import SincronizarFusionTables.conectarFusionTables;
 import Entorno.Configuracion.Config;
+import com.google.api.services.fusiontables.Fusiontables;
 import java.io.IOException;
-import ActualizadorLocal.ActualizadorDBLocal;
+import com.google.api.services.fusiontables.model.Sqlresponse;
+import java.util.List;
 
 /**
  * Una clase para gobernarlas a todas, una clase para encontrarlas, una clase para atraerlas a todas y atarlas en las tinieblas
@@ -25,6 +26,7 @@ public class SiMa {
      */
     static ActualizadorLocal.ActualizadorDBLocal _actualizarDB;
 
+    
 
     /**
      * Método principal de la clase
@@ -32,22 +34,27 @@ public class SiMa {
      */
     public static void main(String[] args) throws IOException {
         
-        //System.out.println(_c.getInt("db.MAX_CACHE_SIZE"));
-        System.out.println(_c.getBool("debug"));
+        //_actualizarDB = new ActualizadorDBLocal("01-09-2013 00:00:00");
+        //_actualizarDB.run();
         
-        _actualizarDB = new ActualizadorDBLocal("01-09-2013 00:00:00");
-        _actualizarDB.run();
+        conectarFusionTables _cF = new conectarFusionTables();
+        
+        //_cF.listaTablas();
+        Sqlresponse res =_cF.sql("SELECT ROWID FROM "+ _c.get("ft.PASOSPORDIA.ID") + " WHERE idNodo = \"01\"");
+        //Sqlresponse res2 =_cF.sql("INSERT INTO "+ _c.get("ft.PASOSPORDIA.ID") + "(idNodo, Total) VALUES (\"01,100\")");
+        //Sqlresponse res3 =_cF.update(_c.get("ft.PASOSPORDIA.ID"), "Total", "500", (String) res.getRows().get(0).get(0)  );
+        
+        Sqlresponse res4 = _cF.delete( _c.get("ft.PASOSPORDIA.ID"), res.getRows());
+        
+        
+        System.out.println(res.toString());
+        //res.getRows().get(0).get(0).
+        
+        
+        //conectarFusionTables t = new conectarFusionTables();
+        //System.out.println(_c.getBool("debug"));
 
-        //ejemplo p = new ejemplo();
-        //p.run();
-        //System.out.println(_c.get("debug"));
-        conectarFusionTables t = new conectarFusionTables();
-        System.out.println(_c.getBool("debug"));
-             
-             //_r = new Rjava();
-             //_r.run();
         
-        Conectar c = new Conectar();
         _c.set("data.ultimo", Long.toString(System.currentTimeMillis()));
 
         

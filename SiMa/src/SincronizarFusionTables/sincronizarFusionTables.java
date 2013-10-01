@@ -29,6 +29,7 @@ import java.util.logging.Logger;
 /**
  *
  * @author Antonio Fernández Ares (antares.es@gmail.com)
+ * @deprecated 
  */
 public class sincronizarFusionTables extends Thread {
     
