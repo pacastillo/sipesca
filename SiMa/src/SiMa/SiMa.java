@@ -5,6 +5,7 @@ package SiMa;
 
 import SincronizarFusionTables.conectarFusionTables;
 import Entorno.Configuracion.Config;
+import SincronizarFusionTables.PasosPorDia;
 import com.google.api.services.fusiontables.Fusiontables;
 import java.io.IOException;
 import com.google.api.services.fusiontables.model.Sqlresponse;
@@ -37,18 +38,21 @@ public class SiMa {
         //_actualizarDB = new ActualizadorDBLocal("01-09-2013 00:00:00");
         //_actualizarDB.run();
         
-        conectarFusionTables _cF = new conectarFusionTables();
+        //conectarFusionTables _cF = new conectarFusionTables();
         
         //_cF.listaTablas();
-        Sqlresponse res =_cF.sql("SELECT ROWID FROM "+ _c.get("ft.PASOSPORDIA.ID") + " WHERE idNodo = \"01\"");
+        //Sqlresponse res =_cF.sql("SELECT ROWID FROM "+ _c.get("ft.PASOSPORDIA.ID") + " WHERE idNodo = \"01\"");
         //Sqlresponse res2 =_cF.sql("INSERT INTO "+ _c.get("ft.PASOSPORDIA.ID") + "(idNodo, Total) VALUES (\"01,100\")");
         //Sqlresponse res3 =_cF.update(_c.get("ft.PASOSPORDIA.ID"), "Total", "500", (String) res.getRows().get(0).get(0)  );
         
-        Sqlresponse res4 = _cF.delete( _c.get("ft.PASOSPORDIA.ID"), res.getRows());
+        //Sqlresponse res4 = _cF.delete( _c.get("ft.PASOSPORDIA.ID"), res.getRows());
         
         
-        System.out.println(res.toString());
+        //System.out.println(res.toString());
         //res.getRows().get(0).get(0).
+        
+        PasosPorDia p = new PasosPorDia("2013-08-07 05:00:00");
+        p.calcular();
         
         
         //conectarFusionTables t = new conectarFusionTables();
