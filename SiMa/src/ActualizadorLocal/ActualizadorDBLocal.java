@@ -20,6 +20,7 @@ import ActualizadorLocal.Clientes.ClienteNodos;
 import ActualizadorLocal.Clientes.ClienteDispositivos;
 import ActualizadorLocal.Clientes.ClientePasos;
 import Entorno.Conectar.Conectar;
+import Entorno.Configuracion.Config;
 import Entorno.Depuracion.Debug;
 import java.util.Date;
 import java.sql.SQLException;
@@ -68,6 +69,10 @@ public class ActualizadorDBLocal extends Thread {
     static boolean sigo = true;
     //Variables de depuración
     static Debug _d = new Debug();
+    
+    //Variables de configuración
+    static Config _c = new Config();
+    
     //static String label;
     //Variable de gestión de tiempo y actualización
 
@@ -197,11 +202,10 @@ public class ActualizadorDBLocal extends Thread {
      * @param fecha Fecha en formato texto en el formato YYYY-MM-DD HH:mm:SS Por ejemplo: "2013-05-01 00:00:01"
      */
     public ActualizadorDBLocal(String fecha) {
-        try {
-            ultimaActualizacion = _d.sdf.parse(fecha);
-        } catch (ParseException ex) {
-            Logger.getLogger(ActualizadorDBLocal.class.getName()).log(Level.SEVERE, null, ex);
-        }
+            //ultimaActualizacion = _d.sdf.parse(fecha);
+          ultimaActualizacion = new Date();
+          ultimaActualizacion.setTime(Long.parseLong(fecha));
+          System.out.println(ultimaActualizacion.toString());  
     }
 
     /**
@@ -232,6 +236,10 @@ public class ActualizadorDBLocal extends Thread {
 
             //Y una vez actualizado, entramos en el modo automático
             do {
+              
+              _c.set("data.ultimo", Long.toString(ultimaActualizacion.getTime()));
+              
+              
                 if (tg.activeCount() > 2) {
                     waitForIt();
                 } else if ((System.currentTimeMillis() - ultimaActualizacion.getTime()) < TIEMPO_ACTUALIZACIONES_MS) {
@@ -244,13 +252,13 @@ public class ActualizadorDBLocal extends Thread {
 
                     Thread.sleep(tiempo_espera - (System.currentTimeMillis() - ultimaActualizacion.getTime()));
 
-                    TIEMPO_ACTUALIZACIONES_MS = tiempo_espera;
-                    NUMERO_MINUTOS_PETICION = (int) Math.round(tiempo_espera / 1000 / 60);
+                    //TIEMPO_ACTUALIZACIONES_MS = tiempo_espera;
+                    //NUMERO_MINUTOS_PETICION = (int) Math.round(tiempo_espera / 1000 / 60);
 
 
                     _d.primeOUT("TIEMPO_ACTUALIZACIONES_MS: " + tiempo_espera + " ms");
                     _d.primeOUT("NUMERO_MINUTOS_PETICION: " + NUMERO_MINUTOS_PETICION + " minutos");
-
+                    actualizarNodos();
                     actualizaDesdeFecha();
                 } else if ((System.currentTimeMillis() - ultimaActualizacion.getTime()) > TIEMPO_ACTUALIZACIONES_MS) {
                     long tiempo_espera = (long) (-(System.currentTimeMillis() - ultimaActualizacion.getTime()) * -FACTOR_TIEMPO_ESPERA);
@@ -258,14 +266,18 @@ public class ActualizadorDBLocal extends Thread {
                     _d.primeOUT("Me tengo que actualizar cada " + _d.df.format((float) TIEMPO_ACTUALIZACIONES_MS / 1000 / 60) + " minutos");
                     _d.primeOUT("Me actualizaré ahora cada " + _d.df.format((float) tiempo_espera / 1000 / 60) + " minutos");
 
-                    TIEMPO_ACTUALIZACIONES_MS = tiempo_espera;
-                    NUMERO_MINUTOS_PETICION = (int) Math.round(tiempo_espera / 1000 / 60);
+                    //TIEMPO_ACTUALIZACIONES_MS = tiempo_espera;
+                    //NUMERO_MINUTOS_PETICION = (int) Math.round(tiempo_espera / 1000 / 60);
 
                     _d.primeOUT("TIEMPO_ACTUALIZACIONES_MS: " + tiempo_espera + " ms");
                     _d.primeOUT("NUMERO_MINUTOS_PETICION: " + NUMERO_MINUTOS_PETICION + " minutos");
+                    actualizarNodos();
                     actualizaDesdeFecha();
 
                 }
+                
+                _c.set("data.ultimo", Long.toString(ultimaActualizacion.getTime()));
+                
             } while (true);
 
         } catch (ParseException ex) {
@@ -314,7 +326,7 @@ public class ActualizadorDBLocal extends Thread {
                 if (!sigo) {
                     waitForIt();
                 } else {
-                    actualizarDispositivos(i);
+                   actualizarDispositivos(i);
                 }
             }
             synchronized (ActualizadorDBLocal.class) {

@@ -58,6 +58,15 @@ public class Config {
     }
     
      /**
+     * Devuelve el valor de una determinada clave en formato long
+     * @param key La clave a buscar
+     * @return Busca la clave primero en la configuración local, si no eśtá especificada, en la configuración global, si no existe, se devuelve null
+     */
+    public long getLong(String key) {
+        return Long.parseLong(this.get(key));
+    }    
+    
+     /**
      * Devuelve el valor de una determinada clave en formato booleano
      * @param key La clave a buscar
      * @return Busca la clave primero en la configuración local, si no eśtá especificada, en la configuración global, si no existe, se devuelve null

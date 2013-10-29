@@ -63,7 +63,7 @@ public class ClientePasos {
     //Variables de multihebrado
     List<threadSyncDB> l_th = new ArrayList<>();
     public String label;
-    public long TIME_SLEEP_IN_ERROR = _c.getInt("db.PASO.TIME_SLEEP_IN_ERROR ");
+    public long TIME_SLEEP_IN_ERROR = _c.getInt("db.PASO.TIME_SLEEP_IN_ERROR");
     public int MAX_HEBRAS_ACTIVAS_SIMULTANEAS = _c.getInt("db.PASO.MAX_HEBRAS_ACTIVAS_SIMULTANEAS");
     public int MAX_ERRORES_PARA_NOTIFICACION = _c.getInt("db.PASO.MAX_ERRORES_PARA_NOTIFICACION");
 
@@ -95,11 +95,11 @@ public class ClientePasos {
 
     public void createWebResource(String node) {
         query = "https://cityanalytics.net/restapi/rawdataservice/" 
-                + node + "/pasos?user="+ queryParamValues[0] +" &pass="+ queryParamValues[1] + "&start="
+                + node + "/pasos?user="+ queryParamValues[0] +"&pass="+ queryParamValues[1] + "&start="
                 + queryParamValues[3] + "&end="
                 + queryParamValues[2];
         webResource = client.resource("https://cityanalytics.net/restapi/rawdataservice/"
-                + node + "/pasos?user="+ queryParamValues[0] +" &pass="+ queryParamValues[1] + "&start="
+                + node + "/pasos?user="+ queryParamValues[0] +"&pass="+ queryParamValues[1] + "&start="
                 + queryParamValues[3] + "&end="
                 + queryParamValues[2]);
     }

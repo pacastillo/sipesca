@@ -3,64 +3,68 @@
  */
 package SiMa;
 
-import SincronizarFusionTables.conectarFusionTables;
+import ActualizadorLocal.ActualizadorDBLocal;
+import SincronizarFusionTables.ActualizadorFT;
 import Entorno.Configuracion.Config;
+import Entorno.Depuracion.Debug;
 import SincronizarFusionTables.PasosPorDia;
-import com.google.api.services.fusiontables.Fusiontables;
 import java.io.IOException;
-import com.google.api.services.fusiontables.model.Sqlresponse;
-import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import util.TwitterAgente;
 
 /**
- * Una clase para gobernarlas a todas, una clase para encontrarlas, una clase para atraerlas a todas y atarlas en las tinieblas
+ * Una clase para gobernarlas a todas, una clase para encontrarlas, una clase para atraerlas a todas y atarlas en las
+ * tinieblas
+ *
  * @author Antonio Fernández Ares (antares.es@gmail.com)
  */
 public class SiMa {
+
+  /**
+   * Cargamos la configuración
+   */
+  static Config _c = new Config();
+  /**
+   * Cargamos variable de depuración
+   */
+  static Debug _d = new Debug();
+  /**
+   * Manejador de la actualización en Córdoba
+   */
+  static ActualizadorLocal.ActualizadorDBLocal _actualizarDB;
+  /**
+   * Manejador de la actualización en FusionTable
+   */
+  static ActualizadorFT _actualizarFT;
+  /**
+   * Manejador de grupos de hebras
+   */
+  static ThreadGroup tg;
+
+  /**
+   * Método principal de la clase
+   *
+   * @param args Los argumentos de ejecución (Actualmente no utilizados)
+   */
+  public static void main(String[] args) throws IOException {
+    tg = Thread.currentThread().getThreadGroup();
+
+    _actualizarDB = new ActualizadorDBLocal(_c.get("data.ultimo"));
+    _actualizarFT = new ActualizadorFT();
+
+    _actualizarFT.start();
+    _actualizarDB.start();
+
+    //TwitterAgente _t = new TwitterAgente();
+    //_t.publicar("Seguímos haciendo pruebas, ahora con la codificación de caractéres. Ñadú. Perdón por las molestias.");
+
+      try {
+      //_actualizarFT.join();
+      _actualizarDB.join();
+      } catch (InterruptedException ex) {
+      Logger.getLogger(SiMa.class.getName()).log(Level.SEVERE, null, ex);
+      }
     
-    /**
-     * Cargamos la configuración
-     */
-    static Config _c = new Config();
-    
-    /** 
-     * Manejador de la actualización en Córdoba
-     */
-    static ActualizadorLocal.ActualizadorDBLocal _actualizarDB;
-
-    
-
-    /**
-     * Método principal de la clase
-     * @param args Los argumentos de ejecución (Actualmente no utilizados)
-     */
-    public static void main(String[] args) throws IOException {
-        
-        //_actualizarDB = new ActualizadorDBLocal("01-09-2013 00:00:00");
-        //_actualizarDB.run();
-        
-        //conectarFusionTables _cF = new conectarFusionTables();
-        
-        //_cF.listaTablas();
-        //Sqlresponse res =_cF.sql("SELECT ROWID FROM "+ _c.get("ft.PASOSPORDIA.ID") + " WHERE idNodo = \"01\"");
-        //Sqlresponse res2 =_cF.sql("INSERT INTO "+ _c.get("ft.PASOSPORDIA.ID") + "(idNodo, Total) VALUES (\"01,100\")");
-        //Sqlresponse res3 =_cF.update(_c.get("ft.PASOSPORDIA.ID"), "Total", "500", (String) res.getRows().get(0).get(0)  );
-        
-        //Sqlresponse res4 = _cF.delete( _c.get("ft.PASOSPORDIA.ID"), res.getRows());
-        
-        
-        //System.out.println(res.toString());
-        //res.getRows().get(0).get(0).
-        
-        PasosPorDia p = new PasosPorDia("2013-08-07 05:00:00");
-        p.calcular();
-        
-        
-        //conectarFusionTables t = new conectarFusionTables();
-        //System.out.println(_c.getBool("debug"));
-
-        
-        _c.set("data.ultimo", Long.toString(System.currentTimeMillis()));
-
-        
-    }
+  }
 }

@@ -89,7 +89,7 @@ public class ClienteDispositivos {
     /**
      * Variable de gestión peticiones en caché a la BD - Tamáño máximo.
      */
-    int MAX_CACHE_SIZE = _c.getInt("db.DISPOSITIVO.MAX_CACHE_SIZE 5000");
+    int MAX_CACHE_SIZE = _c.getInt("db.DISPOSITIVO.MAX_CACHE_SIZE");
     /**
      * Variable de gestión multihebrado - Listado de hebras hijas.
      */
@@ -193,6 +193,14 @@ public class ClienteDispositivos {
      * petición HTTP
      */
     public void createWebResource(String node) {
+      
+      _d.primeERR("https://cityanalytics.net/restapi/rawdataservice/"
+                + node + "/dispositivos?user=" + queryParamValues[0]
+                + "&pass=" + queryParamValues[1]
+                + "&start=" + queryParamValues[2]
+                + "&end=" + queryParamValues[3]
+                + "&inc=true");
+      
         webResource = client.resource("https://cityanalytics.net/restapi/rawdataservice/"
                 + node + "/dispositivos?user=" + queryParamValues[0]
                 + "&pass=" + queryParamValues[1]
@@ -281,7 +289,6 @@ public class ClienteDispositivos {
      * Función que establece la conexión con la base de datos local
      *
      * @param connect Variable de conexión con la base de datos local
-     * @deprecated
      */
     public void setConexion(Conectar connect) {
         this.conexion = connect;

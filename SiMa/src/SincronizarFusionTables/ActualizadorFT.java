@@ -16,18 +16,49 @@
  */
 package SincronizarFusionTables;
 
+import Entorno.Depuracion.Debug;
+import Entorno.Configuracion.Config;
+import java.util.Date;
+import java.util.Timer;
+import java.util.TimerTask;
+
 /**
+ * Clase encargada de ejecutar el temporizador para el cálculo y subida de datos actualizados a Google Fusion Tables
  *
  * @author Antonio Fernández Ares (antares.es@gmail.com)
  */
-public abstract class ActualizadorFT {
-    private final String TABLE_ID;
-    
+public class ActualizadorFT {
 
-    public ActualizadorFT(String TABLE_ID) {
-        this.TABLE_ID = TABLE_ID;
-    }
+  Config _c = new Config();
+  Debug _d = new Debug();
+  //Tarea temporizada
+  TimerTask tt_PasoPorDias;
+
+  public ActualizadorFT() {
     
     
+    this.tt_PasoPorDias = new TimerTask() {
+      @Override
+      public void run() {
+        PasosPorDia p = new PasosPorDia();
+        p.check = true;
+        p.calcular();
+      }
+    };
+  }
+
+    public void start() {
     
+     if(_c.getBool("ft.primera_vez")){
+       PasosPorDia p = new PasosPorDia("2012-10-31 11:15:40");
+       p.check = false; 
+       p.calcular();
+      _c.set("ft.primera_vez", "false");
+     }
+      
+    Timer timer = new Timer("ActualizadorFusionTable", true);
+    timer.scheduleAtFixedRate(tt_PasoPorDias, 1000, _c.getLong("ft.periodo_actualizacion"));
+
+    
+  }
 }

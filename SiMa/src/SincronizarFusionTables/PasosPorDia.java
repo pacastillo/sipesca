@@ -19,6 +19,7 @@ package SincronizarFusionTables;
 import Entorno.Configuracion.Config;
 import Entorno.Depuracion.Debug;
 import Entorno.Conectar.Conectar;
+import com.google.api.services.fusiontables.model.Sqlresponse;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -42,13 +43,29 @@ public class PasosPorDia {
   private ResultSet rs;
   private final String TABLAID = _c.get("ft.PASOSPORDIA.ID");
   private final List<String> campos = new ArrayList<>();
+  public boolean check = false;
 
   //ResultSet rs = st.executeQuery("CALL agrupaPasosPorIntervalosNodo('2013-01-07 00:00:00','2013-06-02 00:00:00'," + 60 + ",'" + idNodo + "')");
   public PasosPorDia(String fecha) {
     this.fecha = fecha;
-    campos.add("Fecha");
+    campos.add("Intervalo");
     campos.add("idNodo");
     campos.add("Total");
+  }
+  
+public PasosPorDia() {
+    campos.add("Intervalo");
+    campos.add("idNodo");
+    campos.add("Total");
+    this.setFechaUltima();
+  }
+  
+  
+  
+  public String setFechaUltima(){
+    Sqlresponse r = cFT.select(TABLAID,"Intervalo","","ORDER BY \'Intervalo\' DESC LIMIT 1" );  
+    this.fecha = (String) r.getRows().get(0).get(0);
+    return fecha;
   }
 
   public boolean calcular() {
@@ -61,12 +78,15 @@ public class PasosPorDia {
       List<String> valores = new ArrayList<>();
 
       while (rs.next()) {
+        System.err.println("->" + rs.getString(1) + " " + rs.getString(2) + " " + rs.getString(3));
         valores.add(rs.getString(1));
         valores.add(rs.getString(2));
         valores.add(rs.getString(3));
-        cFT.insert(TABLAID, campos, valores);
+        cFT.insert(TABLAID, campos, valores, check);
         valores.clear();
       }
+      
+       cFT.sync();
     } catch (SQLException ex) {
       Logger.getLogger(PasosPorDia.class.getName()).log(Level.SEVERE, null, ex);
     }
