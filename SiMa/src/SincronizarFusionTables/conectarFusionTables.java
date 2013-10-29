@@ -23,10 +23,13 @@ import com.google.api.services.fusiontables.model.TableList;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import static java.lang.Thread.sleep;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,8 +39,11 @@ import java.util.logging.Logger;
  * @author Antonio Fernández Ares (antares.es@gmail.com)
  */
 public class conectarFusionTables {
-  
-  Entorno.Configuracion.Config _c = new Entorno.Configuracion.Config();
+
+  /**
+   * Variable de confiruación
+   */
+  private Entorno.Configuracion.Config _c = new Entorno.Configuracion.Config();
   /**
    * Nombre de la aplicación registrada en Google App
    */
@@ -65,7 +71,7 @@ public class conectarFusionTables {
   /**
    * Instancia del manejador de fusiontable
    */
-  private Fusiontables fusiontables;
+  private static Fusiontables fusiontables;
   /**
    * Variable que almacena la query insert cacheada
    */
@@ -73,7 +79,7 @@ public class conectarFusionTables {
   /**
    * Variable de caché de la caché (¡Cómo en origen!)
    */
-  private ArrayList<String> insertCachecache = new ArrayList<>();
+  private static Queue<String> insertCacheLista = new LinkedList<>();
   /**
    * Máximo de INSERTS a almacenar en la cache
    */
@@ -81,11 +87,63 @@ public class conectarFusionTables {
   /**
    * Variable que indica el tamaño actual de la caché de procesamiento de inserts
    */
-  private int insert_cache_contador = 0;
-  
+  private int insertCacheContador = 0;
+  /**
+   * Manejador de colas de peticiones a FusionTables
+   */
+  private static colasManejadorInsert _colas = new colasManejadorInsert();
+
+  /**
+   * Clase encargada de manejar las colas de peticiones de insercción a FusionTable
+   */
+  private static class colasManejadorInsert extends Thread {
+
+    static String pendienteProcesar = null;
+    Boolean vacio = false;
+
+    public colasManejadorInsert() {
+      this.setName("Manejador colas Inserts FT");
+    }
+
+    @Override
+    public void run() {
+      do {
+        synchronized (insertCacheLista) {
+          System.out.println("Soy la hebra manejadora: " + insertCacheLista.size() + " elementos pendientes.");
+          if (insertCacheLista.isEmpty()) {
+            try {
+            insertCacheLista.wait();
+            //Cuando salgo, cojo uno
+            pendienteProcesar = insertCacheLista.poll();
+          } catch (InterruptedException ex) {
+            Logger.getLogger(conectarFusionTables.class.getName()).log(Level.SEVERE, null, ex);
+          }
+          } else if (pendienteProcesar == null) {
+            pendienteProcesar = insertCacheLista.poll();
+          }
+        }
+
+        System.out.println("Soy la hebra manejadora y voy a procesar: " + pendienteProcesar);
+
+        if (sqlStatic(pendienteProcesar) == null) {
+          try {
+            //Ha fallado la transación, por lo que la tenemos que volvemos a procesar pasados unos segundos
+            sleep(30000);
+          } catch (InterruptedException ex) {
+            Logger.getLogger(conectarFusionTables.class.getName()).log(Level.SEVERE, null, ex);
+          }
+        } else {
+          pendienteProcesar = null;
+        }
+
+      } while (true);
+
+    }
+  }
+
   private Credential authorize() throws Exception {
     FileInputStream _f = new FileInputStream(DATA_STORE_FILE);
-    
+
     GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(
             JSON_FACTORY,
             new InputStreamReader(_f));
@@ -97,7 +155,7 @@ public class conectarFusionTables {
               + "into fusiontables-cmdline-sample/src/main/resources/client_secrets.json");
       System.exit(1);
     }
-    
+
     GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
             httpTransport, JSON_FACTORY, clientSecrets,
             Collections.singleton(FusiontablesScopes.FUSIONTABLES)).setDataStoreFactory(
@@ -105,13 +163,14 @@ public class conectarFusionTables {
     // authorize
     return new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize("user");
   }
-  
+
   public conectarFusionTables() {
     try {
       httpTransport = GoogleNetHttpTransport.newTrustedTransport();
       dataStoreFactory = new FileDataStoreFactory(DATA_STORE_DIR);
       Credential credential = authorize();
       fusiontables = new Fusiontables.Builder(httpTransport, JSON_FACTORY, credential).setApplicationName(APPLICATION_NAME).build();
+      if(!_colas.isAlive()){_colas.start();}
     } catch (IOException e) {
       System.err.println(e.getMessage());
     } catch (GeneralSecurityException ex) {
@@ -119,27 +178,27 @@ public class conectarFusionTables {
     } catch (Exception ex) {
       Logger.getLogger(conectarFusionTables.class.getName()).log(Level.SEVERE, null, ex);
     }
-    
+
   }
-  
+
   public Fusiontables.Table.List listaTablas() {
     try {
       // Fetch the table list
       Fusiontables.Table.List listTables = fusiontables.table().list();
       TableList tablelist = listTables.execute();
-      
+
       if (tablelist.getItems() == null || tablelist.getItems().isEmpty()) {
         System.out.println("No tables found!");
         return null;
       }
-      
+
       for (Table table : tablelist.getItems()) {
         System.out.println(table);
         System.out.println("/n");
       }
-      
+
       return listTables;
-      
+
     } catch (IOException ex) {
       Logger.getLogger(conectarFusionTables.class.getName()).log(Level.SEVERE, null, ex);
     }
@@ -156,21 +215,36 @@ public class conectarFusionTables {
     System.err.println(query);
     Sqlresponse res = null;
     try {
-      
-      do {
-        Sql sql = fusiontables.query().sql(query);
-        res = sql.execute();
-        System.err.println(res);
-        System.err.println(res.toString());
-        if (res == null) {
-          Thread.sleep(_c.getInt("ft.tiempo_espera_error_ms"));
-        }
-      } while (res == null);
+      Sql sql = fusiontables.query().sql(query);
+      res = sql.execute();
+      System.err.println(res);
+      System.err.println(res.toString());
+
     } catch (IOException ex) {
       Logger.getLogger(conectarFusionTables.class.getName()).log(Level.SEVERE, null, ex);
       return null;
-    } catch (InterruptedException ex) {
-      Logger.getLogger(conectarFusionTables.class.getName()).log(Level.SEVERE, null, ex);
+    }
+    return res;
+  }
+
+  /**
+   * Procesa una petición SQL básica en un contexto static
+   *
+   * @param query cadena de texto que indica la petición SQL a realizar
+   * @return El archivo JSON procesado devuelto por la petición
+   */
+  private static Sqlresponse sqlStatic(String query) {
+    System.err.println("Tengo que mandar" + query);
+    Sqlresponse res = null;
+    try {
+      Sql sql = fusiontables.query().sql(query);
+      res = sql.execute();
+      System.err.println(res);
+      System.err.println(res.toString());
+
+    } catch (IOException ex) {
+      //Logger.getLogger(conectarFusionTables.class.getName()).log(Level.SEVERE, null, ex);
+      return null;
     }
     return res;
   }
@@ -221,7 +295,7 @@ public class conectarFusionTables {
         }
         peticion = peticion + campos.get(i) + "=\'" + valores.get(i) + "\'";
       }
-      
+
       System.err.println(peticion);
       Sqlresponse s = this.sql(peticion);
       System.err.println(s.size());
@@ -230,16 +304,16 @@ public class conectarFusionTables {
       //Por tanto, no hay valores. Hace un s.getRows().isEmpty() no funciona.
       if (s.size() == 2) {
         peticion = "INSERT INTO " + tabla + "(";
-        
+
         for (int i = 0; i < campos.size(); i++) {
           if (i != 0) {
             peticion = peticion + ",";
           }
           peticion = peticion + campos.get(i);
         }
-        
+
         peticion = peticion + ") VALUES (";
-        
+
         for (int i = 0; i < valores.size(); i++) {
           if (i != 0) {
             peticion = peticion + ",";
@@ -247,27 +321,27 @@ public class conectarFusionTables {
           peticion = peticion + "\'" + valores.get(i) + "\'";
         }
         peticion = peticion + ");";
-        
+
         insertCache = insertCache + peticion;
-        insert_cache_contador++;
+        insertCacheContador++;
         //return this.sql(peticion);
 
       } else {
         return this.update(tabla, campos, valores, s.getRows());
       }
-      
+
     } else {
       peticion = "INSERT INTO " + tabla + "(";
-      
+
       for (int i = 0; i < campos.size(); i++) {
         if (i != 0) {
           peticion = peticion + ",";
         }
         peticion = peticion + campos.get(i);
       }
-      
+
       peticion = peticion + ") VALUES (";
-      
+
       for (int i = 0; i < valores.size(); i++) {
         if (i != 0) {
           peticion = peticion + ",";
@@ -276,41 +350,39 @@ public class conectarFusionTables {
       }
       peticion = peticion + ");";
       insertCache = insertCache + peticion;
-      insert_cache_contador++;
+      insertCacheContador++;
       //return this.sql(peticion);
     }
-    
+
     sync();
     return null;
-    
+
   }
-  
+
   public String status() {
-    return "Sincronización FT" + " Cache: " + insert_cache_contador;
+    return "Sincronización FT" + " Cache: " + insertCacheContador;
   }
-  
-  public void forceSync() {
-    Sqlresponse res;
-    do {
-      res = this.sql(insertCache);
-      if (res == null) {
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException ex) {
-          Logger.getLogger(conectarFusionTables.class.getName()).log(Level.SEVERE, null, ex);
-        }
-      }
-    } while (res == null);
-  }
-  
-  public void sync() {
-    if (insert_cache_contador >= INSERT_MAX_CACHE) {
-      Sqlresponse res = this.sql(insertCache);
-      
-      if (res == null) {
-        //No se ha podido procesar la query...
-      } else {
-        insert_cache_contador = 0;
+
+//    public void forceSync() {
+//      Sqlresponse res;
+//      do {
+//        res = this.sql(insertCache);
+//        if (res == null) {
+//          try {
+//            Thread.sleep(1000);
+//          } catch (InterruptedException ex) {
+//            Logger.getLogger(conectarFusionTables.class.getName()).log(Level.SEVERE, null, ex);
+//          }
+//        }
+//      } while (res == null);
+//    }
+  public synchronized void sync() {
+    if (insertCacheContador >= INSERT_MAX_CACHE) {
+      synchronized (insertCacheLista) {
+        //Sqlresponse res = this.sql(insertCache);
+        insertCacheLista.add(insertCache);
+        insertCacheLista.notify();
+        insertCacheContador = 0;
         insertCache = "";
       }
     }
@@ -341,10 +413,10 @@ public class conectarFusionTables {
   public Sqlresponse insert(String tabla, String campos, String valores) {
     List<String> c = new ArrayList<>();
     List<String> v = new ArrayList<>();
-    
+
     c.add(campos);
     v.add(valores);
-    
+
     return insert(tabla, c, v, true);
   }
 
@@ -359,10 +431,10 @@ public class conectarFusionTables {
   public Sqlresponse insert(String tabla, String campos, String valores, boolean check) {
     List<String> c = new ArrayList<>();
     List<String> v = new ArrayList<>();
-    
+
     c.add(campos);
     v.add(valores);
-    
+
     return insert(tabla, c, v, check);
   }
 
@@ -377,9 +449,9 @@ public class conectarFusionTables {
    */
   public Sqlresponse update(String tabla, List<String> campos, List<String> valores, List<List<Object>> ROWIDs) {
     for (Object ite : ROWIDs) {
-      
+
       String peticion = "UPDATE " + tabla + " SET ";
-      
+
       for (int i = 0; i < campos.size(); i++) {
         if (i > 0) {
           peticion = peticion + ",";
@@ -387,7 +459,7 @@ public class conectarFusionTables {
         peticion = peticion + campos.get(i) + " = \'" + valores.get(i) + "\'";
       }
       peticion = peticion + "WHERE ROWID = " + "\'" + ((String) ((List<String>) ite).get(0)) + "\'; ";
-      
+
       this.sql(peticion);
     }
     return null;
@@ -414,12 +486,12 @@ public class conectarFusionTables {
    */
   public Sqlresponse delete(String tabla, List<List<Object>> ROWIDs) {
     String peticion;
-    
+
     for (Object ite : ROWIDs) {
       peticion = "DELETE FROM " + tabla + "\" WHERE ROWID = " + "\'" + ((String) ((List<String>) ite).get(0)) + "\';";
       this.sql(peticion);
     }
-    
+
     return null;
   }
 }

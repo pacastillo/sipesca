@@ -57,7 +57,7 @@ public class ActualizadorFT {
      }
       
     Timer timer = new Timer("ActualizadorFusionTable", true);
-    timer.scheduleAtFixedRate(tt_PasoPorDias, 1000, _c.getLong("ft.periodo_actualizacion"));
+    timer.scheduleAtFixedRate(tt_PasoPorDias, _c.getLong("ft.periodo_actualizacion"), _c.getLong("ft.periodo_actualizacion"));
 
     
   }
