@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+        xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+            android:title="Preferencias">
+
+        <EditTextPreference
+            android:key="nodo_id_preference"
+            android:defaultValue="nodo1"
+            android:title="ID del nodo"
+            android:summary="Identificación del nodo (para subir datos)"
+            android:dialogTitle="ID del nodo" />
+         
+		<EditTextPreference
+			android:key="url_preference"
+            android:defaultValue="http://www.google.com"
+            android:title="URL para subir los datos"
+            android:summary="URL completa para subir los datos al servidor"
+            android:dialogTitle="URL para subir los datos" />
+            					 
+    </PreferenceCategory>
+	
+</PreferenceScreen>
